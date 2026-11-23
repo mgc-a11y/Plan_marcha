@@ -9,6 +9,17 @@
     #resultado { margin-top: 1.5rem; font-size: 1.15rem; }
     .error { color: #b00020; }
     .nota { color: #555; font-size: 0.9rem; }
+    #perfil svg { width: 100%; height: auto; display: block; }
+    #perfil .rejilla { stroke: #e3e3e3; stroke-width: 1; }
+    #perfil .eje { font-size: 12px; fill: #666; }
+    #perfil .area { fill: #d6ecd2; }
+    #perfil .linea { fill: none; stroke: #2e7d32; stroke-width: 2; stroke-linejoin: round; }
+    #perfil circle.alto { fill: #c62828; stroke: #fff; stroke-width: 2; }
+    #perfil circle.bajo { fill: #1565c0; stroke: #fff; stroke-width: 2; }
+    #perfil .etiqueta { font-size: 14px; font-weight: 600; paint-order: stroke; stroke: #fff; stroke-width: 4px; }
+    #perfil .etiqueta.alto { fill: #c62828; }
+    #perfil .etiqueta.bajo { fill: #1565c0; }
+    .leyenda { font-size: 0.95rem; }
   </style>
 </head>
 <body>
@@ -18,24 +29,42 @@
   <input type="file" id="archivo" accept=".gpx,application/gpx+xml">
 
   <p id="resultado" aria-live="polite"></p>
+  <div id="perfil"></div>
 
   <p class="nota">Tu GPX no sale de tu dispositivo: todo se calcula en este navegador.</p>
 
   <script src="gpx.js"></script>
+  <script src="perfil.js"></script>
   <script>
     var entrada = document.getElementById("archivo");
     var salida = document.getElementById("resultado");
+    var dibujo = document.getElementById("perfil");
+    var ultimaRuta = null;
+
+    // Si cambia el ancho de la ventana (o giras el móvil), se vuelve a dibujar.
+    var anchoAnterior = dibujo.clientWidth;
+    window.addEventListener("resize", function () {
+      if (ultimaRuta && dibujo.clientWidth !== anchoAnterior) {
+        anchoAnterior = dibujo.clientWidth;
+        dibujarPerfil(dibujo, ultimaRuta);
+      }
+    });
 
     entrada.addEventListener("change", function () {
       var archivo = entrada.files[0];
       if (!archivo) return;
       archivo.text().then(function (texto) {
         try {
+          var r = analizarGpx(texto);
           salida.className = "";
-          salida.textContent = resumenEnPalabras(analizarGpx(texto));
+          salida.textContent = resumenEnPalabras(r);
+          ultimaRuta = r;
+          dibujarPerfil(dibujo, r);
         } catch (e) {
           salida.className = "error";
           salida.textContent = e.message;
+          ultimaRuta = null;
+          dibujo.textContent = "";
         }
       });
     });

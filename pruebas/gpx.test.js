@@ -68,6 +68,53 @@ test("sin nombre: lo dice", () => {
   assert.equal(r.nombre, "Sin nombre");
 });
 
+test("perfil: un punto por cada altitud, empezando en el km 0", () => {
+  const r = analizarGpx(ejemplo);
+  assert.equal(r.perfil.length, 11);
+  assert.equal(r.perfil[0].km, 0);
+  assert.equal(r.perfil[0].ele, 100);
+  assert.ok(Math.abs(r.perfil[10].km - 111.195) < 0.01);
+});
+
+test("perfil: punto más alto 230 m al final (km 111,2)", () => {
+  const r = analizarGpx(ejemplo);
+  assert.equal(r.puntoMasAlto.ele, 230);
+  assert.ok(Math.abs(r.puntoMasAlto.km - 111.195) < 0.01);
+});
+
+test("perfil: punto más bajo 100 m en la salida (km 0)", () => {
+  const r = analizarGpx(ejemplo);
+  assert.equal(r.puntoMasBajo.ele, 100);
+  assert.equal(r.puntoMasBajo.km, 0);
+});
+
+test("perfil: si la altitud máxima se repite, marca la primera", () => {
+  const r = analizarGpx(gpx(
+    '<trk><trkseg><trkpt lat="0" lon="0"><ele>100</ele></trkpt>' +
+    '<trkpt lat="0.1" lon="0"><ele>200</ele></trkpt>' +
+    '<trkpt lat="0.2" lon="0"><ele>200</ele></trkpt></trkseg></trk>'
+  ));
+  assert.ok(Math.abs(r.puntoMasAlto.km - 11.1195) < 0.001);
+});
+
+test("perfil: con dos tramos los km siguen sin saltos", () => {
+  const r = analizarGpx(gpx(
+    '<trk><trkseg><trkpt lat="0" lon="0"><ele>1</ele></trkpt><trkpt lat="0.1" lon="0"><ele>2</ele></trkpt></trkseg>' +
+    '<trkseg><trkpt lat="10" lon="0"><ele>3</ele></trkpt><trkpt lat="10.1" lon="0"><ele>4</ele></trkpt></trkseg></trk>'
+  ));
+  assert.ok(Math.abs(r.perfil[2].km - 11.1195) < 0.001);
+  assert.ok(Math.abs(r.perfil[3].km - 2 * 11.1195) < 0.001);
+});
+
+test("perfil: sin altitudes no hay perfil ni puntos marcados", () => {
+  const r = analizarGpx(gpx(
+    '<trk><trkseg><trkpt lat="0" lon="0"/><trkpt lat="0.1" lon="0"/></trkseg></trk>'
+  ));
+  assert.deepEqual(r.perfil, []);
+  assert.equal(r.puntoMasAlto, null);
+  assert.equal(r.puntoMasBajo, null);
+});
+
 test("archivo que no es GPX: avisa", () => {
   assert.throws(() => analizarGpx("hola"), /no parece un GPX/);
 });

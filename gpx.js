@@ -98,16 +98,23 @@ function analizarGpx(texto) {
   var distancia = 0;
   var desnivel = 0;
   var hayAltitud = false;
+  // Perfil: km recorridos hasta cada punto y su altitud.
+  var perfil = [];
 
   tramos.forEach(function (puntos) {
     totalPuntos += puntos.length;
-    for (var i = 1; i < puntos.length; i++) {
-      distancia += distanciaKm(puntos[i - 1], puntos[i]);
-      var antes = puntos[i - 1].ele;
-      var ahora = puntos[i].ele;
-      if (antes !== null && ahora !== null) {
-        hayAltitud = true;
-        if (ahora > antes) desnivel += ahora - antes;
+    for (var i = 0; i < puntos.length; i++) {
+      if (i > 0) {
+        distancia += distanciaKm(puntos[i - 1], puntos[i]);
+        var antes = puntos[i - 1].ele;
+        var ahora = puntos[i].ele;
+        if (antes !== null && ahora !== null) {
+          hayAltitud = true;
+          if (ahora > antes) desnivel += ahora - antes;
+        }
+      }
+      if (puntos[i].ele !== null) {
+        perfil.push({ km: distancia, ele: puntos[i].ele });
       }
     }
   });
@@ -116,11 +123,27 @@ function analizarGpx(texto) {
     throw new Error("El GPX no tiene puntos suficientes para medir la ruta.");
   }
 
+  // Si la altitud máxima o mínima se repite, se marca la primera vez.
+  var masAlto = null;
+  var masBajo = null;
+  perfil.forEach(function (p) {
+    if (masAlto === null || p.ele > masAlto.ele) masAlto = p;
+    if (masBajo === null || p.ele < masBajo.ele) masBajo = p;
+  });
+  if (perfil.length < 2) {
+    perfil = [];
+    masAlto = null;
+    masBajo = null;
+  }
+
   return {
     nombre: nombre,
     distanciaKm: distancia,
     desnivelPositivoM: hayAltitud ? desnivel : null,
-    puntos: totalPuntos
+    puntos: totalPuntos,
+    perfil: perfil,
+    puntoMasAlto: masAlto,
+    puntoMasBajo: masBajo
   };
 }
 
