@@ -1,2 +1,5 @@
 # El plan es privado: no se sube a GitHub
 *.pdf
+
+# Configuración local de Claude Code: no es parte de la web
+.claude/

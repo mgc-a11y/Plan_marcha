@@ -4,8 +4,41 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Nutri_bici</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 40rem; margin: 2rem auto; padding: 0 16px; line-height: 1.5; }
+    #resultado { margin-top: 1.5rem; font-size: 1.15rem; }
+    .error { color: #b00020; }
+    .nota { color: #555; font-size: 0.9rem; }
+  </style>
 </head>
 <body>
   <h1>Hola, grupeta</h1>
+
+  <label for="archivo">Elige tu archivo GPX:</label><br>
+  <input type="file" id="archivo" accept=".gpx,application/gpx+xml">
+
+  <p id="resultado" aria-live="polite"></p>
+
+  <p class="nota">Tu GPX no sale de tu dispositivo: todo se calcula en este navegador.</p>
+
+  <script src="gpx.js"></script>
+  <script>
+    var entrada = document.getElementById("archivo");
+    var salida = document.getElementById("resultado");
+
+    entrada.addEventListener("change", function () {
+      var archivo = entrada.files[0];
+      if (!archivo) return;
+      archivo.text().then(function (texto) {
+        try {
+          salida.className = "";
+          salida.textContent = resumenEnPalabras(analizarGpx(texto));
+        } catch (e) {
+          salida.className = "error";
+          salida.textContent = e.message;
+        }
+      });
+    });
+  </script>
 </body>
 </html>
