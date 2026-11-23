@@ -3,8 +3,34 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const {
-  potenciaNecesaria, velocidadParaPotencia, dividirEnTramos, estimarRuta, formatoDuracion, TIPOS_BAJADOR
+  potenciaNecesaria, velocidadParaPotencia, dividirEnTramos, estimarRuta, formatoDuracion, TIPOS_BAJADOR,
+  estimarPorVelocidad
 } = require("../ritmo.js");
+
+test("velocidad media: 100 km a 25 km/h = 4 h", () => {
+  const r = estimarPorVelocidad({ distanciaKm: 100 }, { velocidadKmh: 25, gramosHora: 60 });
+  cerca(r.segundosTotales, 4 * 3600, 1e-6);
+  assert.equal(formatoDuracion(r.segundosTotales), "4 h 00 min");
+});
+
+test("velocidad media: 4 h × 60 g/h = 240 g de hidratos", () => {
+  const r = estimarPorVelocidad({ distanciaKm: 100 }, { velocidadKmh: 25, gramosHora: 60 });
+  cerca(r.hidratosTotalesG, 240, 1e-6);
+});
+
+test("velocidad media: 48,13 km a 20 km/h = 2 h 24 min (2,4065 h)", () => {
+  const r = estimarPorVelocidad({ distanciaKm: 48.13 }, { velocidadKmh: 20, gramosHora: 80 });
+  cerca(r.segundosTotales, 2.4065 * 3600, 1e-6);
+  assert.equal(formatoDuracion(r.segundosTotales), "2 h 24 min");
+  cerca(r.hidratosTotalesG, 192.52, 1e-6);
+});
+
+test("velocidad media: no depende de las cuestas", () => {
+  const llano = { distanciaKm: 10, perfil: [{ km: 0, ele: 0 }, { km: 10, ele: 0 }] };
+  const cuesta = { distanciaKm: 10, perfil: [{ km: 0, ele: 0 }, { km: 10, ele: 800 }] };
+  const d = { velocidadKmh: 30, gramosHora: 60 };
+  cerca(estimarPorVelocidad(llano, d).segundosTotales, estimarPorVelocidad(cuesta, d).segundosTotales, 1e-9);
+});
 
 const cerca = (a, b, tol, txt) => assert.ok(Math.abs(a - b) < tol, (txt || "") + " salió " + a + ", esperaba " + b);
 

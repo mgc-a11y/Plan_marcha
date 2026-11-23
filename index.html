@@ -24,7 +24,8 @@
     .campos { display: flex; flex-wrap: wrap; gap: 1rem; }
     .campos label { display: flex; flex-direction: column; font-size: 0.95rem; flex: 1 1 8rem; }
     .campos input, .campos select { font-size: 1.1rem; padding: 0.3rem; margin-top: 0.2rem; }
-    .campos + .campos { margin-top: 1rem; }
+    .campos + .campos, #bloquePotencia { margin-top: 1rem; }
+    [hidden] { display: none !important; }
     #ritmo .grande { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.3rem; }
     #ritmo table { border-collapse: collapse; width: 100%; margin: 0.8rem 0; }
     #ritmo th, #ritmo td { text-align: right; padding: 0.3rem 0.5rem; border-bottom: 1px solid #e3e3e3; }
@@ -46,14 +47,30 @@
   <fieldset>
     <legend>Tus datos</legend>
     <div class="campos">
+      <label>Calcular el tiempo con
+        <select id="modo">
+          <option value="potencia" selected>Mi potencia (FTP)</option>
+          <option value="velocidad">Una velocidad media</option>
+        </select>
+      </label>
+      <label>Hidratos (g por hora)
+        <input type="number" id="hidratos" inputmode="numeric" min="0" max="200" step="1" value="60">
+      </label>
+    </div>
+
+    <div class="campos" id="bloqueVelocidad" hidden>
+      <label>Velocidad media (km/h)
+        <input type="number" id="velocidad" inputmode="decimal" min="5" max="60" step="0.1">
+      </label>
+    </div>
+
+    <div id="bloquePotencia">
+    <div class="campos">
       <label>FTP (vatios)
         <input type="number" id="ftp" inputmode="numeric" min="50" max="700" step="1">
       </label>
       <label>Peso (kg)
         <input type="number" id="peso" inputmode="decimal" min="30" max="200" step="0.1">
-      </label>
-      <label>Hidratos (g por hora)
-        <input type="number" id="hidratos" inputmode="numeric" min="0" max="200" step="1" value="60">
       </label>
     </div>
     <div class="campos">
@@ -70,6 +87,7 @@
           <option value="malo">Mal bajador (máx. 55 km/h)</option>
         </select>
       </label>
+    </div>
     </div>
   </fieldset>
 
@@ -93,7 +111,19 @@
     var campoPctSubida = document.getElementById("pctSubida");
     var campoPctLlano = document.getElementById("pctLlano");
     var campoBajador = document.getElementById("bajador");
+    var campoModo = document.getElementById("modo");
+    var campoVelocidad = document.getElementById("velocidad");
+    var bloquePotencia = document.getElementById("bloquePotencia");
+    var bloqueVelocidad = document.getElementById("bloqueVelocidad");
     var ultimaRuta = null;
+
+    // Es uno u otro: solo se ven los campos del modo elegido.
+    function cambiarModo() {
+      var porVelocidad = campoModo.value === "velocidad";
+      bloqueVelocidad.hidden = !porVelocidad;
+      bloquePotencia.hidden = porVelocidad;
+      mostrarRitmo();
+    }
 
     // Opciones de intensidad: del 50 % al 100 % del FTP, de 5 en 5.
     [[campoPctSubida, SUPUESTOS.fraccionSubida], [campoPctLlano, SUPUESTOS.fraccionLlano]].forEach(function (par) {
@@ -128,10 +158,30 @@
       cajaRitmo.textContent = "";
       if (!ultimaRuta) return;
 
-      var ftp = leerCampo(campoFtp, 50, 700);
-      var peso = leerCampo(campoPeso, 30, 200);
       var hidratos = leerCampo(campoHidratos, 0, 200);
       var faltan = [];
+
+      if (campoModo.value === "velocidad") {
+        var velocidad = leerCampo(campoVelocidad, 5, 60);
+        if (velocidad === null) faltan.push("tu velocidad media (entre 5 y 60 km/h)");
+        if (hidratos === null) faltan.push("los gramos de hidratos por hora (entre 0 y 200)");
+        if (faltan.length) {
+          cajaRitmo.appendChild(elemento("p", "Para calcular el tiempo, escribe " + faltan.join(", ") + "."));
+          return;
+        }
+        var ev = estimarPorVelocidad(ultimaRuta, { velocidadKmh: velocidad, gramosHora: hidratos });
+        cajaRitmo.appendChild(elemento("p", "Tiempo estimado: " + formatoDuracion(ev.segundosTotales) + " (sin paradas)", "grande"));
+        cajaRitmo.appendChild(elemento("p",
+          num(ultimaRuta.distanciaKm, 1) + " km a " + num(velocidad, 1) + " km/h de media. " +
+          "No se usan la potencia, el peso ni las cuestas."));
+        cajaRitmo.appendChild(elemento("p",
+          "Hidratos: " + num(hidratos, 0) + " g/h × " + num(ev.segundosTotales / 3600, 1) + " h = " +
+          num(Math.round(ev.hidratosTotalesG), 0) + " g en total."));
+        return;
+      }
+
+      var ftp = leerCampo(campoFtp, 50, 700);
+      var peso = leerCampo(campoPeso, 30, 200);
       if (ftp === null) faltan.push("tu FTP (entre 50 y 700 W)");
       if (peso === null) faltan.push("tu peso (entre 30 y 200 kg)");
       if (hidratos === null) faltan.push("los gramos de hidratos por hora (entre 0 y 200)");
@@ -192,9 +242,10 @@
       cajaRitmo.appendChild(sup);
     }
 
-    [campoFtp, campoPeso, campoHidratos].forEach(function (c) {
+    [campoFtp, campoPeso, campoHidratos, campoVelocidad].forEach(function (c) {
       c.addEventListener("input", mostrarRitmo);
     });
+    campoModo.addEventListener("change", cambiarModo);
     [campoPctSubida, campoPctLlano, campoBajador].forEach(function (c) {
       c.addEventListener("change", mostrarRitmo);
     });

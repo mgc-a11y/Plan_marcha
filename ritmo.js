@@ -148,6 +148,18 @@ function estimarRuta(ruta, datos, cambios) {
   };
 }
 
+// Alternativa sin potencia: el usuario da una velocidad media (km/h).
+// Tiempo = distancia ÷ velocidad. No usa FTP, peso, intensidades ni bajador.
+// datos: { velocidadKmh, gramosHora }.
+function estimarPorVelocidad(ruta, datos) {
+  var segundos = (ruta.distanciaKm / datos.velocidadKmh) * 3600;
+  return {
+    segundosTotales: segundos,
+    velocidadMediaKmh: datos.velocidadKmh,
+    hidratosTotalesG: datos.gramosHora * (segundos / 3600)
+  };
+}
+
 function formatoDuracion(segundos) {
   var min = Math.round(segundos / 60);
   var h = Math.floor(min / 60);
@@ -164,6 +176,7 @@ if (typeof module !== "undefined" && module.exports) {
     velocidadParaPotencia: velocidadParaPotencia,
     dividirEnTramos: dividirEnTramos,
     estimarRuta: estimarRuta,
+    estimarPorVelocidad: estimarPorVelocidad,
     formatoDuracion: formatoDuracion
   };
 }
