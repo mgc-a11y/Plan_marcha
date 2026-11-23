@@ -26,7 +26,8 @@ function formatoKm(km) {
 }
 
 function formatoM(m) {
-  return Math.round(m).toLocaleString("es-ES") + " m";
+  // "+ 0" evita que se escriba "-0 m" por redondeos.
+  return (Math.round(m) + 0).toLocaleString("es-ES") + " m";
 }
 
 // Con muchos puntos, dibuja uno de cada N para que vaya fluido.

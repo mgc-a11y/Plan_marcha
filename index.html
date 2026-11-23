@@ -20,6 +20,17 @@
     #perfil .etiqueta.alto { fill: #c62828; }
     #perfil .etiqueta.bajo { fill: #1565c0; }
     .leyenda { font-size: 0.95rem; }
+    fieldset { border: 1px solid #ccc; border-radius: 8px; margin: 1.5rem 0; padding: 0.5rem 1rem 1rem; }
+    .campos { display: flex; flex-wrap: wrap; gap: 1rem; }
+    .campos label { display: flex; flex-direction: column; font-size: 0.95rem; flex: 1 1 8rem; }
+    .campos input, .campos select { font-size: 1.1rem; padding: 0.3rem; margin-top: 0.2rem; }
+    .campos + .campos { margin-top: 1rem; }
+    #ritmo .grande { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.3rem; }
+    #ritmo table { border-collapse: collapse; width: 100%; margin: 0.8rem 0; }
+    #ritmo th, #ritmo td { text-align: right; padding: 0.3rem 0.5rem; border-bottom: 1px solid #e3e3e3; }
+    #ritmo td { white-space: nowrap; }
+    #ritmo th:first-child, #ritmo td:first-child { text-align: left; white-space: normal; }
+    details { margin-top: 0.8rem; font-size: 0.9rem; color: #444; }
   </style>
 </head>
 <body>
@@ -32,18 +43,161 @@
        Si el archivo no es un GPX, gpx.js lo detecta y avisa. -->
   <input type="file" id="archivo" accept=".gpx,application/gpx+xml,application/xml,text/xml,application/octet-stream">
 
+  <fieldset>
+    <legend>Tus datos</legend>
+    <div class="campos">
+      <label>FTP (vatios)
+        <input type="number" id="ftp" inputmode="numeric" min="50" max="700" step="1">
+      </label>
+      <label>Peso (kg)
+        <input type="number" id="peso" inputmode="decimal" min="30" max="200" step="0.1">
+      </label>
+      <label>Hidratos (g por hora)
+        <input type="number" id="hidratos" inputmode="numeric" min="0" max="200" step="1" value="60">
+      </label>
+    </div>
+    <div class="campos">
+      <label>Intensidad en subida (% del FTP)
+        <select id="pctSubida"></select>
+      </label>
+      <label>Intensidad en llano (% del FTP)
+        <select id="pctLlano"></select>
+      </label>
+      <label>¿Cómo bajas?
+        <select id="bajador">
+          <option value="bueno">Buen bajador (máx. 75 km/h)</option>
+          <option value="medio" selected>Bajador medio (máx. 65 km/h)</option>
+          <option value="malo">Mal bajador (máx. 55 km/h)</option>
+        </select>
+      </label>
+    </div>
+  </fieldset>
+
   <p id="resultado" aria-live="polite"></p>
   <div id="perfil"></div>
+  <div id="ritmo" aria-live="polite"></div>
 
   <p class="nota">Tu GPX no sale de tu dispositivo: todo se calcula en este navegador.</p>
 
   <script src="gpx.js"></script>
   <script src="perfil.js"></script>
+  <script src="ritmo.js"></script>
   <script>
     var entrada = document.getElementById("archivo");
     var salida = document.getElementById("resultado");
     var dibujo = document.getElementById("perfil");
+    var cajaRitmo = document.getElementById("ritmo");
+    var campoFtp = document.getElementById("ftp");
+    var campoPeso = document.getElementById("peso");
+    var campoHidratos = document.getElementById("hidratos");
+    var campoPctSubida = document.getElementById("pctSubida");
+    var campoPctLlano = document.getElementById("pctLlano");
+    var campoBajador = document.getElementById("bajador");
     var ultimaRuta = null;
+
+    // Opciones de intensidad: del 50 % al 100 % del FTP, de 5 en 5.
+    [[campoPctSubida, SUPUESTOS.fraccionSubida], [campoPctLlano, SUPUESTOS.fraccionLlano]].forEach(function (par) {
+      for (var p = 50; p <= 100; p += 5) {
+        var op = document.createElement("option");
+        op.value = p;
+        op.textContent = p + " %";
+        if (p === Math.round(par[1] * 100)) op.selected = true;
+        par[0].appendChild(op);
+      }
+    });
+
+    function num(n, decimales) {
+      return n.toLocaleString("es-ES", { minimumFractionDigits: decimales, maximumFractionDigits: decimales });
+    }
+
+    function elemento(etiqueta, texto, clase) {
+      var el = document.createElement(etiqueta);
+      if (texto !== undefined) el.textContent = texto;
+      if (clase) el.className = clase;
+      return el;
+    }
+
+    // Lee un número del formulario. Devuelve null si está vacío o fuera de rango.
+    function leerCampo(campo, minimo, maximo) {
+      var v = parseFloat(String(campo.value).replace(",", "."));
+      if (isNaN(v) || v < minimo || v > maximo) return null;
+      return v;
+    }
+
+    function mostrarRitmo() {
+      cajaRitmo.textContent = "";
+      if (!ultimaRuta) return;
+
+      var ftp = leerCampo(campoFtp, 50, 700);
+      var peso = leerCampo(campoPeso, 30, 200);
+      var hidratos = leerCampo(campoHidratos, 0, 200);
+      var faltan = [];
+      if (ftp === null) faltan.push("tu FTP (entre 50 y 700 W)");
+      if (peso === null) faltan.push("tu peso (entre 30 y 200 kg)");
+      if (hidratos === null) faltan.push("los gramos de hidratos por hora (entre 0 y 200)");
+      if (faltan.length) {
+        cajaRitmo.appendChild(elemento("p", "Para calcular el tiempo, escribe " + faltan.join(", ") + "."));
+        return;
+      }
+
+      var pctSubida = parseInt(campoPctSubida.value, 10);
+      var pctLlano = parseInt(campoPctLlano.value, 10);
+      var bajador = campoBajador.value;
+      var e = estimarRuta(ultimaRuta, {
+        ftp: ftp, pesoKg: peso, gramosHora: hidratos,
+        pctSubida: pctSubida, pctLlano: pctLlano, bajador: bajador
+      });
+      var horas = e.segundosTotales / 3600;
+
+      cajaRitmo.appendChild(elemento("p", "Tiempo estimado: " + formatoDuracion(e.segundosTotales) + " (sin paradas)", "grande"));
+      cajaRitmo.appendChild(elemento("p",
+        "Velocidad media: " + num(e.velocidadMediaKmh, 1) + " km/h. Pedaleando a " +
+        Math.round(e.potenciaSubidaW) + " W en subida (" + pctSubida + " % de tu FTP) y a " +
+        Math.round(e.potenciaLlanoW) + " W en llano y bajada (" + pctLlano + " %)."));
+
+      var tabla = elemento("table");
+      var cab = elemento("tr");
+      ["Tramos", "Km", "Tiempo", "Velocidad"].forEach(function (t) { cab.appendChild(elemento("th", t)); });
+      tabla.appendChild(cab);
+      [["subida", "Subida (más de 2 %)"], ["llano", "Llano (entre −2 % y 2 %)"], ["bajada", "Bajada (menos de −2 %)"]].forEach(function (g) {
+        var d = e.grupos[g[0]];
+        if (d.metros <= 0) return;
+        var fila = elemento("tr");
+        fila.appendChild(elemento("td", g[1]));
+        fila.appendChild(elemento("td", num(d.metros / 1000, 1)));
+        fila.appendChild(elemento("td", formatoDuracion(d.segundos)));
+        fila.appendChild(elemento("td", num((d.metros / d.segundos) * 3.6, 1) + " km/h"));
+        tabla.appendChild(fila);
+      });
+      cajaRitmo.appendChild(tabla);
+
+      cajaRitmo.appendChild(elemento("p",
+        "Hidratos: " + num(hidratos, 0) + " g/h × " + num(horas, 1) + " h = " +
+        num(Math.round(e.hidratosTotalesG), 0) + " g en total."));
+
+      var sup = elemento("details");
+      sup.appendChild(elemento("summary", "Supuestos del cálculo"));
+      var lista = elemento("ul");
+      [
+        "Subida: tramos de más del 2 %. Bajada: de menos del −2 %. El resto es llano.",
+        "En las bajadas se pedalea con la intensidad de llano, hasta tu velocidad máxima (" + e.velocidadMaxKmh + " km/h).",
+        "En bajadas suaves el aire frena antes de llegar a ese máximo.",
+        "Bici y equipo: " + SUPUESTOS.pesoBiciKg + " kg (masa total " + num(e.masaKg, 1) + " kg).",
+        "Postura con las manos en las manetas (CdA " + num(SUPUESTOS.cda, 2) + " m²), asfalto (rodadura " + num(SUPUESTOS.crr, 3) + ").",
+        "Aire a nivel del mar y 15 °C. Sin viento.",
+        "Sin paradas.",
+        "Es una estimación, no un objetivo. Modelo: Martin et al. (1998)."
+      ].forEach(function (t) { lista.appendChild(elemento("li", t)); });
+      sup.appendChild(lista);
+      cajaRitmo.appendChild(sup);
+    }
+
+    [campoFtp, campoPeso, campoHidratos].forEach(function (c) {
+      c.addEventListener("input", mostrarRitmo);
+    });
+    [campoPctSubida, campoPctLlano, campoBajador].forEach(function (c) {
+      c.addEventListener("change", mostrarRitmo);
+    });
 
     // Si cambia el ancho de la ventana (o giras el móvil), se vuelve a dibujar.
     var anchoAnterior = dibujo.clientWidth;
@@ -70,6 +224,7 @@
           ultimaRuta = null;
           dibujo.textContent = "";
         }
+        mostrarRitmo();
       });
     });
   </script>
