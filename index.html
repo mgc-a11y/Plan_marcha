@@ -26,9 +26,11 @@
   <h1>Hola, grupeta</h1>
 
   <label for="archivo">Elige tu archivo GPX:</label><br>
-  <!-- Sin filtro "accept": el iPhone no reconoce .gpx y lo deja en gris.
+  <!-- Filtro pensado para el iPhone: con solo ".gpx" deja los archivos en gris,
+       y sin filtro ofrece fotos y cámara. "application/octet-stream" (cualquier
+       archivo de datos) intenta que solo salga "Seleccionar archivo".
        Si el archivo no es un GPX, gpx.js lo detecta y avisa. -->
-  <input type="file" id="archivo">
+  <input type="file" id="archivo" accept=".gpx,application/gpx+xml,application/xml,text/xml,application/octet-stream">
 
   <p id="resultado" aria-live="polite"></p>
   <div id="perfil"></div>
