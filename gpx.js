@@ -59,7 +59,8 @@ function leerPuntos(texto, etiqueta) {
     var ele = null;
     var e = /<ele>\s*([^<]+?)\s*<\/ele>/.exec(m[2] || "");
     if (e && !isNaN(parseFloat(e[1]))) ele = parseFloat(e[1]);
-    puntos.push({ lat: lat, lon: lon, ele: ele });
+    var conHora = /<time>/.test(m[2] || "");
+    puntos.push({ lat: lat, lon: lon, ele: ele, conHora: conHora });
   }
   return puntos;
 }
@@ -79,6 +80,20 @@ function leerTramos(texto) {
     return tramos;
   }
   return [leerPuntos(texto, "rtept")];
+}
+
+// ¿La altitud puede venir de un planificador con mapa de relieve?
+// Pista: ningún punto tiene hora (no se grabó en bici) y el archivo no lo
+// exportaron Strava ni Garmin Connect, que ponen su propia altitud corregida
+// (comprobado el 24/11/2026 con el track QH 2026: Map Plus 7297 m,
+// exportado de Strava 4154 m, exportado de Garmin 3584 m).
+function altitudPlanificada(texto, tramos) {
+  var algunaHora = tramos.some(function (t) {
+    return t.some(function (p) { return p.conHora; });
+  });
+  if (algunaHora) return false;
+  var creador = (/<gpx\b[^>]*\bcreator\s*=\s*["']([^"']*)["']/.exec(texto) || [, ""])[1];
+  return !/strava|garmin/i.test(creador);
 }
 
 function analizarGpx(texto) {
@@ -143,9 +158,16 @@ function analizarGpx(texto) {
     puntos: totalPuntos,
     perfil: perfil,
     puntoMasAlto: masAlto,
-    puntoMasBajo: masBajo
+    puntoMasBajo: masBajo,
+    // Solo tiene sentido avisar si hay altitudes.
+    altitudPlanificada: hayAltitud && altitudPlanificada(texto, tramos)
   };
 }
+
+var AVISO_RUTA_PLANIFICADA =
+  "Esta ruta parece planificada (sus puntos no tienen hora). Su altitud puede " +
+  "venir de un mapa de relieve y el desnivel salir inflado. Si te parece alto, " +
+  "impórtala en Strava o Garmin Connect y sube aquí el GPX que exportes.";
 
 function resumenEnPalabras(r) {
   var km = r.distanciaKm.toLocaleString("es-ES", {
@@ -168,6 +190,7 @@ if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     analizarGpx: analizarGpx,
     resumenEnPalabras: resumenEnPalabras,
+    AVISO_RUTA_PLANIFICADA: AVISO_RUTA_PLANIFICADA,
     distanciaKm: distanciaKm,
     RADIO_TIERRA_KM: RADIO_TIERRA_KM
   };

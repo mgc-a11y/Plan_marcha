@@ -8,6 +8,7 @@
     body { font-family: system-ui, sans-serif; max-width: 40rem; margin: 2rem auto; padding: 0 16px; line-height: 1.5; }
     #resultado { margin-top: 1.5rem; font-size: 1.15rem; }
     .error { color: #b00020; }
+    .aviso { background: #fff4e5; border-left: 4px solid #e08a00; padding: 0.6rem 0.8rem; border-radius: 4px; font-size: 0.95rem; }
     .nota { color: #555; font-size: 0.9rem; }
     #perfil svg { width: 100%; height: auto; display: block; }
     #perfil .rejilla { stroke: #e3e3e3; stroke-width: 1; }
@@ -92,6 +93,7 @@
   </fieldset>
 
   <p id="resultado" aria-live="polite"></p>
+  <p id="avisoAltitud" class="aviso" hidden></p>
   <div id="perfil"></div>
   <div id="ritmo" aria-live="polite"></div>
 
@@ -104,6 +106,7 @@
     var entrada = document.getElementById("archivo");
     var salida = document.getElementById("resultado");
     var dibujo = document.getElementById("perfil");
+    var avisoAltitud = document.getElementById("avisoAltitud");
     var cajaRitmo = document.getElementById("ritmo");
     var campoFtp = document.getElementById("ftp");
     var campoPeso = document.getElementById("peso");
@@ -267,11 +270,14 @@
           var r = analizarGpx(texto);
           salida.className = "";
           salida.textContent = resumenEnPalabras(r);
+          avisoAltitud.textContent = AVISO_RUTA_PLANIFICADA;
+          avisoAltitud.hidden = !r.altitudPlanificada;
           ultimaRuta = r;
           dibujarPerfil(dibujo, r);
         } catch (e) {
           salida.className = "error";
           salida.textContent = e.message;
+          avisoAltitud.hidden = true;
           ultimaRuta = null;
           dibujo.textContent = "";
         }

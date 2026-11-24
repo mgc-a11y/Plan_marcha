@@ -115,6 +115,34 @@ test("perfil: sin altitudes no hay perfil ni puntos marcados", () => {
   assert.equal(r.puntoMasBajo, null);
 });
 
+// Aviso de ruta planificada (altitud de mapa de relieve).
+const dosPuntos = (atributosGpx, hora) =>
+  "<gpx " + atributosGpx + "><trk><trkseg>" +
+  '<trkpt lat="0" lon="0"><ele>100</ele>' + (hora ? "<time>2026-06-04T06:00:00Z</time>" : "") + "</trkpt>" +
+  '<trkpt lat="0.1" lon="0"><ele>120</ele>' + (hora ? "<time>2026-06-04T06:10:00Z</time>" : "") + "</trkpt>" +
+  "</trkseg></trk></gpx>";
+
+test("aviso: ruta de un planificador sin hora (como Map Plus) → avisa", () => {
+  assert.equal(analizarGpx(dosPuntos('creator="Map Plus 2.9.2"', false)).altitudPlanificada, true);
+});
+
+test("aviso: exportada de Strava sin hora → no avisa", () => {
+  assert.equal(analizarGpx(dosPuntos('creator="StravaGPX"', false)).altitudPlanificada, false);
+});
+
+test("aviso: exportada de Garmin Connect sin hora → no avisa", () => {
+  assert.equal(analizarGpx(dosPuntos('creator="Garmin Connect"', false)).altitudPlanificada, false);
+});
+
+test("aviso: actividad grabada (con hora) de cualquier app → no avisa", () => {
+  assert.equal(analizarGpx(dosPuntos('creator="Map Plus 2.9.2"', true)).altitudPlanificada, false);
+});
+
+test("aviso: sin altitudes no hay nada que avisar", () => {
+  const r = analizarGpx('<gpx creator="Otro"><trk><trkseg><trkpt lat="0" lon="0"/><trkpt lat="0.1" lon="0"/></trkseg></trk></gpx>');
+  assert.equal(r.altitudPlanificada, false);
+});
+
 test("archivo que no es GPX: avisa", () => {
   assert.throws(() => analizarGpx("hola"), /no parece un GPX/);
 });

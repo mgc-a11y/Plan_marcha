@@ -35,3 +35,36 @@ Qué falta concretar:
 - Comprobar si se puede llegar a otras carpetas (iCloud Drive, En mi iPhone) o si el usuario no tiene más.
 - Probar en Android y en otros iPhone antes de la versión definitiva.
 - Una web no puede elegir en qué carpeta se abre el selector.
+
+## Desnivel inflado en rutas planificadas
+Apuntado el 24/11/2026. Track QH 2026 (creado con Map Plus, sin hora en los puntos).
+
+Qué pasó:
+- La web daba 7297 m de desnivel (el real son unos 3700-3800 m). No sumaba bajadas: la bajada era 7251 m aparte.
+- La altitud venía de un mapa de relieve y «ondulaba» 5-25 m cada 100-200 m, también en plena subida.
+- Strava, Garmin Connect y Wikiloc sustituyen la altitud del archivo por la de su base de datos.
+
+| Mismo track | Desnivel en la plataforma | Desnivel en la web |
+|---|---|---|
+| Original de Map Plus | — | 7297 m |
+| Exportado de Strava | 4163 m | 4154 m |
+| Exportado de Garmin Connect | 3575 m | 3584 m |
+
+Filtros probados con el original (no aplicados):
+- Umbral de 10 m (GPS Visualizer, con fuente): 5109 m. Mejora, pero se queda alto.
+- Media de 500 m (sin fuente): 3854 m. Estropea las rutas grabadas (gravel 302 m frente a 412 m de Strava).
+
+Decisión: no filtrar. La web avisa cuando el GPX no tiene hora y no viene de Strava ni de Garmin.
+Solución práctica: importar la ruta en Strava o Garmin Connect y exportar el GPX.
+
+## Idea: corregir la altitud con el mapa (cota Z)
+Apuntado el 24/11/2026, a propuesta del usuario. Para cuando pongamos la ruta sobre un mapa
+(puntos de comida y de agua), usar la altitud del mapa para ajustar la del track, como Strava o Garmin.
+
+Antes de hacerlo, decidir:
+- Privacidad: pedir alturas o teselas de un mapa en internet revela por dónde pasa la ruta.
+  Hoy la regla es que el GPX no sale del dispositivo. ¿Se acepta, avisando al usuario?
+- Calidad: Map Plus ya usaba un mapa de relieve y dio 7297 m. Depende mucho de la resolución del mapa
+  y de cómo se suavice. Strava usa barómetros de su comunidad, no solo relieve.
+- Librerías: un mapa casi seguro necesita una librería. Preguntar antes de añadirla.
+- Comparar el resultado con los exportados de Strava (4163 m) y Garmin (3584 m) de este mismo track.
