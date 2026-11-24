@@ -1,5 +1,22 @@
 # Pendientes
 
+## ▶ Próxima sesión (25/11/2026): empezar aquí
+Objetivo principal de la app: **generar un GPX con la ruta y los puntos donde comer y beber**
+(no fuentes ni puntos de agua, sino los momentos en que el ciclista come o bebe).
+
+1. **Investigar fuentes de nutrición deportiva en ciclismo** sobre cada cuánto comer y beber
+   (¿cada 15 min, cada 30 min, según la situación?). Solo fuentes fiables, citadas. La app calcula,
+   no receta: la investigación sirve para informar al usuario, que elige.
+2. **El usuario dará su punto de vista** sobre la frecuencia de comer y beber.
+3. **Diseñar la generación del GPX**: el navegador crea y descarga el archivo, sin servidor.
+   Puntos con nombre tipo «Comer 1 — 30 g» o «Beber 3», colocados según el tiempo estimado.
+   Decidir qué pasa en el modo «velocidad media» (reparte el tiempo por igual).
+4. **Prueba en el Garmin Edge 1030 Plus**: ver cómo muestra los puntos de un GPX importado
+   en Garmin Connect. Se hará cuando haga falta.
+5. **Mapa (después del track)**: mirar qué servicio de mapas público usar (Google Maps pide clave y
+   pago; OpenStreetMap es gratis con normas de uso). Ver la sección «Idea: corregir la altitud
+   con el mapa (cota Z)». Preguntar antes de añadir librerías.
+
 ## Revisar distancia y desnivel frente a Strava
 Apuntado el 23/11/2026. Volver a analizarlo cuando la web pueda comparar más datos.
 
